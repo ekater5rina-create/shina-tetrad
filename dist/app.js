@@ -1,12 +1,14 @@
 import {TYPES,METHODS,cents,totals,validate,csvCell} from './core.js';
 import {printNotebook} from './print.js';
 import {initCatalog} from './catalog-picker.js?v=6';
+import {initOwner} from './owner.js?v=7';
 const SECTIONS={'Продажи':['sale','package','other'],'Закупки':['purchase'],'Шиномонтаж':['service','straightening','disposal'],'Расход':['expense','salary','collection','bonus','income'],'Возвраты':['refund','market']};
 const sectionFor=type=>Object.keys(SECTIONS).find(key=>SECTIONS[key].includes(type));
 const $=s=>document.querySelector(s), fmt=n=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:n%100?2:0}).format(n/100), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const localDate=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const KEY='shina-tetrad-v1';let data={version:1,entries:[],days:{}},storageError=false;
 try{const saved=localStorage.getItem(KEY);if(saved)data=validate(JSON.parse(saved));}catch{storageError=true;}
+let owner=null;
 let date=localDate(),filter='Продажи',page='journal',editing=null,dayMode='opening';$('#date').value=date;
 function toast(s){$('#toast').textContent=s;$('#toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').style.display='none',4000);}
 // Save the proposed state first: a full disk must never look like a successful write.
@@ -14,7 +16,7 @@ function commit(next){try{if(storageError)throw Error('Данные в брау�
 function day(){return data.days[date]||{opening:0,actual:null,closed:false};}function entries(){return data.entries.filter(e=>e.date===date);}
 function withDay(){const n=structuredClone(data);n.days[date]??={opening:0,actual:null,closed:false};return n;}
 const symbol=t=>({sale:'↗',service:'✳',straightening:'◉',package:'▱',disposal:'↻',purchase:'↓',expense:'−',salary:'−',collection:'↗',refund:'↩',market:'↩',income:'＋',other:'↗',bonus:'−'}[t]);
-function render(){const d=day(),es=entries(),t=totals(es,d.opening);$('#balance').textContent=fmt(t.ending);$('#opening-label').textContent=fmt(d.opening);$('#revenue').textContent=fmt(t.revenue);$('#outflow').textContent=fmt(t.outflow);$('#count').textContent=es.length;$('#day-state').textContent=d.closed?'Закрыт':'Открыт';$('#day-state').classList.toggle('closed',d.closed);$('#opening').disabled=d.closed;$('#add-top').disabled=d.closed;
+function render(){if(page==='owner')owner?.render();const d=day(),es=entries(),t=totals(es,d.opening);$('#balance').textContent=fmt(t.ending);$('#opening-label').textContent=fmt(d.opening);$('#revenue').textContent=fmt(t.revenue);$('#outflow').textContent=fmt(t.outflow);$('#count').textContent=es.length;$('#day-state').textContent=d.closed?'Закрыт':'Открыт';$('#day-state').classList.toggle('closed',d.closed);$('#opening').disabled=d.closed;$('#add-top').disabled=d.closed;
  $('#filters').innerHTML=Object.keys(SECTIONS).map(f=>`<button class="${f===filter?'active':''}" aria-pressed="${f===filter}" data-filter="${f}">${f}</button>`).join('');
  $('#category-name').textContent=filter;
  const query=$('#search').value.toLocaleLowerCase('ru');const rows=es.filter(e=>sectionFor(e.type)===filter&&[e.title,e.article,e.customer,e.phone,e.manager,e.note].join(' ').toLocaleLowerCase('ru').includes(query)).sort((a,b)=>b.time.localeCompare(a.time)||b.id.localeCompare(a.id));
@@ -29,7 +31,7 @@ function render(){const d=day(),es=entries(),t=totals(es,d.opening);$('#balance'
  $('#summary').innerHTML=`<div class="summary-block"><h3>ВЫРУЧКА · ВСЕ СПОСОБЫ ОПЛАТЫ</h3>${row('Продажи, пакеты, прочее',t.sales)}${row('Шиномонтаж, правка, утилизация',t.services)}${row('Выручка до возвратов',t.revenue,'total')}${row('Возвраты покупателям и Я.Маркет',t.refunds)}${row('Выручка за вычетом возвратов',t.revenue-t.refunds)}</div><div class="summary-block"><h3>ДВИЖЕНИЕ НАЛИЧНЫХ</h3>${row('На начало дня',d.opening)}${row('+ Все поступления наличными',t.cashIn)}${row('− Все выплаты наличными',t.cashOut)}${row('Расчетный остаток',t.ending,'total')}${d.actual!==null?row('Фактически в кассе',d.actual)+row('Расхождение: факт − расчет',d.actual-t.ending):''}</div><div class="summary-block"><h3>БЕЗНАЛИЧНЫЕ · ПОСТУПЛЕНИЯ МИНУС ВЫПЛАТЫ</h3>${row('QR',t.qr)}${row('Терминал',t.card)}${row('Перевод',t.transfer)}</div>`;$('#close-day').textContent=d.closed?'Открыть день для исправлений':'Закрыть день и сверить кассу';
  $('#titles').innerHTML=[...new Set(data.entries.map(e=>e.title))].slice(-100).map(s=>`<option value="${esc(s)}">`).join('');$('#managers').innerHTML=[...new Set(data.entries.map(e=>e.manager).filter(Boolean))].map(s=>`<option value="${esc(s)}">`).join('');
 }
-function go(p){page=p;for(const s of ['journal','summary','data'])$('#'+s+'-view').hidden=s!==p;document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===p));$('#page-title').textContent={journal:'Тетрадь',summary:'Итого',data:'Копия и выгрузка'}[p];render();}
+function go(p){page=p;for(const s of ['journal','summary','data','owner'])$('#'+s+'-view').hidden=s!==p;document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===p));document.body.classList.toggle('owner-mode',p==='owner');$('#page-title').textContent={journal:'Тетрадь',summary:'Итого',data:'Копия и выгрузка',owner:'Собственник'}[p];if(p==='owner')owner?.open();render();}
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>go(b.dataset.page));$('#settings').onclick=()=>go('data');$('#send-sheet').onclick=()=>toast('Подключение Google Таблицы скоро. Данные не отправлены.');
 $('#print-day').onclick=()=>printNotebook({date,entries:entries(),day:day()});
 $('#date').onchange=()=>{if(!$('#date').value)return;date=$('#date').value;render();};for(const [id,delta]of [['prev',-1],['next',1]])$('#'+id).onclick=()=>{const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+delta);date=localDate(d);$('#date').value=date;render();};$('#today').onclick=()=>{date=localDate();$('#date').value=date;render();};
@@ -57,4 +59,6 @@ $('#csv').onclick=()=>{const rows=[['Дата','Время','Операция','
 $('#restore').onclick=()=>$('#import-file').click();$('#import-file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>10e6)throw Error('Файл больше 10 МБ');const n=validate(JSON.parse(await f.text()));if(confirm(`Заменить все текущие данные копией: ${n.entries.length} записей? Сначала сохраните текущую резервную копию.`)&&commit(n)){render();toast('Данные восстановлены');}}catch(err){toast('Копия не загружена: '+err.message);}e.target.value='';};
 let installPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('#install').hidden=false;});$('#install').onclick=async()=>{await installPrompt?.prompt();$('#install').hidden=true;};
 window.addEventListener('storage',e=>{if(e.key===KEY){try{data=validate(JSON.parse(e.newValue));render();toast('Данные обновлены в другой вкладке');}catch{toast('Изменились данные браузера. Перезагрузите приложение.');}}});
+owner=initOwner({getData:()=>data,getDate:()=>date});
+if(location.hash==='#owner')go('owner');
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});render();if(storageError)toast('Ошибка чтения данных. Новые записи заблокированы, чтобы сохранить исходные данные.');

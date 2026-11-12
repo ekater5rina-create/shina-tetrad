@@ -1,5 +1,5 @@
-const CACHE='tetrad-v6';
-const FILES=['./','./index.html','./style.css','./territory.css','./notebook.css','./print.css','./print.js','./territory-mark.svg','./app.js?v=6','./core.js','./catalog.js','./catalog-picker.js?v=6','./icon.svg','./manifest.webmanifest'];
+const CACHE='tetrad-v7';
+const FILES=['./','./index.html','./style.css','./territory.css','./notebook.css','./print.css','./print.js','./territory-mark.svg','./app.js?v=7','./owner.js?v=7','./owner-metrics.js?v=7','./owner.css?v=7','./core.js','./catalog.js','./catalog-picker.js?v=6','./icon.svg','./manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(
  caches.open(CACHE).then(cache=>cache.addAll(FILES.map(file=>new Request(new URL(file,self.registration.scope),{cache:'reload'})))).then(()=>self.skipWaiting())
 ));
