@@ -1,6 +1,6 @@
 import {TYPES,METHODS,cents,totals,validate,csvCell} from './core.js';
 import {printNotebook} from './print.js';
-import {initCatalog} from './catalog-picker.js';
+import {initCatalog} from './catalog-picker.js?v=6';
 const SECTIONS={'Продажи':['sale','package','other'],'Закупки':['purchase'],'Шиномонтаж':['service','straightening','disposal'],'Расход':['expense','salary','collection','bonus','income'],'Возвраты':['refund','market']};
 const sectionFor=type=>Object.keys(SECTIONS).find(key=>SECTIONS[key].includes(type));
 const $=s=>document.querySelector(s), fmt=n=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:n%100?2:0}).format(n/100), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -57,4 +57,4 @@ $('#csv').onclick=()=>{const rows=[['Дата','Время','Операция','
 $('#restore').onclick=()=>$('#import-file').click();$('#import-file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>10e6)throw Error('Файл больше 10 МБ');const n=validate(JSON.parse(await f.text()));if(confirm(`Заменить все текущие данные копией: ${n.entries.length} записей? Сначала сохраните текущую резервную копию.`)&&commit(n)){render();toast('Данные восстановлены');}}catch(err){toast('Копия не загружена: '+err.message);}e.target.value='';};
 let installPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('#install').hidden=false;});$('#install').onclick=async()=>{await installPrompt?.prompt();$('#install').hidden=true;};
 window.addEventListener('storage',e=>{if(e.key===KEY){try{data=validate(JSON.parse(e.newValue));render();toast('Данные обновлены в другой вкладке');}catch{toast('Изменились данные браузера. Перезагрузите приложение.');}}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});render();if(storageError)toast('Ошибка чтения данных. Новые записи заблокированы, чтобы сохранить исходные данные.');
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});render();if(storageError)toast('Ошибка чтения данных. Новые записи заблокированы, чтобы сохранить исходные данные.');
