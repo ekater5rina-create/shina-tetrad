@@ -34,6 +34,9 @@ export function validate(data){
  for(const e of data.entries){
   if(!e||typeof e.id!=='string'||ids.has(e.id)||!Object.hasOwn(TYPES,e.type)||!validDate(e.date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(e.time)||!integer(e.amount)||e.amount<=0||!Number.isInteger(e.qty)||e.qty<1||e.qty>9999||!Array.isArray(e.payments)||!e.payments.length||e.payments.length>2)throw Error('Ошибка записи в копии');
   for(const key of ['title','article','manager','customer','phone','note'])if(typeof e[key]!=='string'||e[key].length>2000)throw Error('Ошибка текстового поля');
+  if(e.catalogId!==undefined&&(typeof e.catalogId!=='string'||e.catalogId.length>100))throw Error('Ошибка товара в копии');
+  if(e.unitPrice!==undefined&&(!integer(e.unitPrice)||e.unitPrice<=0))throw Error('Ошибка цены товара в копии');
+  if(e.priceAdjusted!==undefined&&typeof e.priceAdjusted!=='boolean')throw Error('Ошибка признака изменения цены');
   if(e.payments.some(p=>!p||!Object.hasOwn(METHODS,p.method)||!integer(p.amount)||p.amount<0)||e.payments.reduce((s,p)=>s+p.amount,0)!==e.amount)throw Error('Сумма оплат не совпадает');
   if(!Object.hasOwn(data.days,e.date))throw Error('Не найден день записи');ids.add(e.id);
  }return data;
