@@ -19,7 +19,7 @@ function render(){const d=day(),es=entries(),t=totals(es,d.opening);$('#balance'
  $('#titles').innerHTML=[...new Set(data.entries.map(e=>e.title))].slice(-100).map(s=>`<option value="${esc(s)}">`).join('');$('#managers').innerHTML=[...new Set(data.entries.map(e=>e.manager).filter(Boolean))].map(s=>`<option value="${esc(s)}">`).join('');
 }
 function go(p){page=p;for(const s of ['journal','summary','data'])$('#'+s+'-view').hidden=s!==p;document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===p));$('#page-title').textContent={journal:'Рабочий день',summary:'Итоги смены',data:'Моя тетрадь'}[p];render();}
-document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>go(b.dataset.page));$('#settings').onclick=()=>go('data');
+document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>go(b.dataset.page));$('#settings').onclick=()=>go('data');$('#send-sheet').onclick=()=>toast('Подключение Google Таблицы скоро. Данные не отправлены.');
 $('#date').onchange=()=>{if(!$('#date').value)return;date=$('#date').value;render();};for(const [id,delta]of [['prev',-1],['next',1]])$('#'+id).onclick=()=>{const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+delta);date=localDate(d);$('#date').value=date;render();};$('#today').onclick=()=>{date=localDate();$('#date').value=date;render();};
 $('#filters').onclick=e=>{if(e.target.dataset.filter){filter=e.target.dataset.filter;render();}};$('#search').oninput=render;
 $('#type').innerHTML=Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');
